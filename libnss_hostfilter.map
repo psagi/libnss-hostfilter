@@ -1,0 +1,7 @@
+GLIBC_2.2 {
+  global:
+    _nss_hostfilter_gethostbyname2_r;
+    _nss_hostfilter_gethostbyname_r;
+  local:
+    *;
+};

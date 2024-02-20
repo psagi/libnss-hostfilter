@@ -1,0 +1,3 @@
+The hostfilter modul used the source code of libnss-lwres as an example.
+Big thanks to Mark Kettenis <kettenis@gnu.org> for the source code and
+Luca Filipozzi <lfilipoz@debian.org> for the debianization example.

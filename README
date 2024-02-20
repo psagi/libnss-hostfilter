@@ -1,0 +1,16 @@
+This directory contains the 0.1 release of the hostfilter NSS module.
+
+For general building and installation instructions, see the file INSTALL.
+
+The hostfilter NSS module provides a Name Service Switch module that resolves
+blacklisted hostnames to a configurable (dummy) IP address. It will return
+'notfound' on non-blacklisted hostnames allowing further modules (configured in
+nsswitch.conf) to resolve them. For more information on NSS (Name Service
+Switch), please consult the GNU C Library manual.
+
+In order to use the module, add the `hostfilter' service to
+your `/etc/nsswitch.conf'. The hostfilter module only supports
+the `hosts' database.  So you'll want to edit the line that starts
+with `hosts:' to look something like:
+
+   hosts:	files hostfilter dns

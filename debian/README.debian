@@ -1,0 +1,10 @@
+libnss-hostfilter for Debian
+----------------------------
+
+NOTES FOR USERS
+---------------
+
+In order to use this NSS module, you should read the upstream README file
+thoroughly. 
+
+Peter Sági <peter.sagi.s@gmail.com>, Sun, 05 Feb 2023 17:09:25 +0100

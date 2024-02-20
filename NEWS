@@ -1,0 +1,23 @@
+hostfilter NSS module NEWS                                   -*-indented-text-*-
+  History of user visible changes.
+  05 Feb 2023
+
+For now, please send bug reports to <peter.sagi.s@gmail.com>.
+See the README file and the GNU C Library manual for details on sending bug
+reports.
+
+Version 0.1
+
+* Initial release
+
+----------------------------------------------------------------------
+Copyright information:
+
+   Permission is granted to anyone to make or distribute verbatim copies
+   of this document as received, in any medium, provided that the
+   copyright notice and this permission notice are preserved, thus
+   giving the recipient permission to redistribute in turn.
+
+   Permission is granted to distribute modified versions of this
+   document, or of portions of it, under the above conditions, provided
+   also that they carry prominent notices stating who last changed them.

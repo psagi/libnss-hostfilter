@@ -1,0 +1,16 @@
+Source: libnss-hostfilter
+Section: net
+Priority: optional
+Maintainer: Peter Sági <peter.sagi.s@gmail.com>
+Build-Depends: debhelper (>= 8), dh-autoreconf
+Standards-Version: 3.9.2
+
+Package: libnss-hostfilter
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends:
+Description: NSS module for filtering hostname resolution based on a blacklist.
+ This package provides a Name Service Switch module that resolves blacklisted
+ hostnames to a configurable (dummy) IP address. It will return 'notfound' on
+ non-blacklisted hostnames allowing further modules (configured in
+ nsswitch.conf) to resolve them.
