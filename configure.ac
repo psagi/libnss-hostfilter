@@ -3,7 +3,14 @@ AC_INIT(nss_hostfilter, 0.1)
 AC_CONFIG_SRCDIR(hostfilter-host.c)
 AM_INIT_AUTOMAKE
 
+
 dnl Checks for programs.
+
+AX_PTHREAD
+dnl LIBS="$PTHREAD_LIBS $LIBS"
+CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+CC="$PTHREAD_CC"
+
 AC_PROG_CC
 AC_PROG_CPP			dnl Later checks need this.
 AM_DISABLE_STATIC		dnl Makes no sense for a NSS module

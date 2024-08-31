@@ -17,14 +17,24 @@
    write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
    Boston, MA 02111-1307, USA.  */
 
-#include <stddef.h>
-#include <errno.h>
-#include <netdb.h>
+#include <pthread.h>
+
 #include <nss.h>
-#include <arpa/inet.h>
-#include <stdlib.h>
+#include <netdb.h>
+#include <errno.h>
+#include <sys/socket.h>
 #include <string.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include <error.h>
+#include <ctype.h>
+
+static char* is_host_allowed_command = NULL;
 
 /* Allow the resolution of the hostname by other plugins */
 static enum nss_status allow(struct hostent *result, int *errnop, int *herrnop)
@@ -120,17 +130,119 @@ static enum nss_status deny(
    return NSS_STATUS_SUCCESS;
 }
 
+static void trim_trailing_whitespace(char* string) {
+   char *end_ptr = string + strlen(string) - 1;
+   while (end_ptr > string && isspace(*end_ptr)) end_ptr--;
+   end_ptr[1] = '\0';
+}
+
+static void parse_conf_file() {
+   static const char hostfilter_conf_file[] = "/etc/hostfilter.conf";
+   static char empty_string[] = "";
+/* error(0, 0, "nss-hostfilter: parse_conf_file()"); */
+   char *is_host_allowed_command_local = empty_string;
+   int saved_errno = errno;
+   FILE *file_ptr = fopen(hostfilter_conf_file, "rce");
+   if (file_ptr != NULL) {
+/* error(0, 0, "nss-hostfilter: parse_conf_file(): file opened"); */
+      is_host_allowed_command_local = NULL;
+      size_t is_host_allowed_command_buffer_len = 0;
+      if (!feof(file_ptr)) {
+	 ssize_t nchars = (
+	    getline(
+	       &is_host_allowed_command_local,
+	       &is_host_allowed_command_buffer_len, file_ptr
+	    )
+	 );
+	 if (nchars <= 0) {
+   	    free(is_host_allowed_command_local);
+   	    is_host_allowed_command_local = empty_string;
+	 }
+	 else trim_trailing_whitespace(is_host_allowed_command_local);
+      }
+      fclose(file_ptr);
+   }
+   errno = saved_errno;	/* errno is thread-local */
+   is_host_allowed_command = is_host_allowed_command_local;
+      /* Trying to make this as atomic as possible - despite of pthread_once
+      invocation. */
+/* error(0, 0, "nss-hostfilter: parse_conf_file(): returning..."); */
+/* error(0, 0, "nss-hostfilter: is_host_allowed_command_local=%x", is_host_allowed_command_local); */
+/* if (is_host_allowed_command_local) error(0, 0, "nss-hostfilter: *is_host_allowed_command_local=\"%s\"", is_host_allowed_command_local); */
+}
+
+/*
+static bool is_valid_file(const char *filename) {
+   if (open(filename, O_RDONLY) < 0) return false;
+   close(filename);
+   return true;
+}
+*/
+
+static const char* get_name(const char* path) {
+   const char* filename = strrchr(path, '/'); // Find the last occurrence of '/'
+   if (filename == NULL) // If no '/' found, return the original path
+      return path;
+   else
+      return filename + 1; // Return the part after the last '/'
+}
+
+static int execute_command(const char* command, const char* argument) {
+/* error(0, 0, "nss-hostfilter: execute_command(%s, %s)", command, argument); */
+   pid_t pid;
+   pid = fork();
+   if (pid == -1) {
+/* error(0, 0, "nss-hostfilter: execute_command(): bailing out after fork()"); */
+      return -1;
+   }
+   if (pid == 0) {
+/* error(0, 0, "nss-hostfilter: execute_command(): we are the child"); */
+      execl(command, get_name(command), argument, NULL);
+/* error(0, 0, "nss-hostfilter: execute_command(): we are the child, error in execl(), errno=%d", errno); */
+      return -1;
+   }
+/* error(0, 0, "nss-hostfilter: execute_command(): we are the parent"); */
+   int child_status;
+   pid_t wait_result;
+   while (
+      ((wait_result = waitpid(pid, &child_status, 0)) == -1) && (errno == EINTR)
+   );
+   if ((wait_result == 0) || !WIFEXITED(child_status)) {
+/* error(0, 0, "nss-hostfilter: execute_command(): we are the parent, bailing out after waiting for the child"); */
+      return -1;
+   }
+/* error(0, 0, "nss-hostfilter: execute_command(): we are the parent, returning..."); */
+   return WEXITSTATUS(child_status);
+}
+
 static enum nss_status
 internal_getipnodebyname_r(const char *name, int af, 
 			    struct hostent *result, char *buffer,
 			    size_t buflen, int *errnop, int *herrnop)
 {
-   static const char is_host_allowed_command[] = "./is_host_allowed.sh";
+/* error(0, 0, "nss-hostfilter: internal_getipnodebyname_r()"); */
+   static pthread_once_t hostfilter_parse_conf_once = PTHREAD_ONCE_INIT;
+   pthread_once(&hostfilter_parse_conf_once, parse_conf_file);
+/* error(0, 0, "nss-hostfilter: internal_getipnodebyname_r(): is_host_allowed_command=%x", is_host_allowed_command); */
+/* if (is_host_allowed_command) error(0, 0, "nss-hostfilter: internal_getipnodebyname_r(): *is_host_allowed_command=\"%s\"", is_host_allowed_command); */
+   if (!is_host_allowed_command || (strcmp(is_host_allowed_command, "") == 0)) {
+      error(0, 0, "nss-hostfilter: No hostfilter helper command configured.");
+      return allow(result, errnop, herrnop);
+   }
+/*
+   if (!is_valid_file(is_host_allowed_command)) {
+      error(
+	 0, 0,
+	 "nss-hostfilter: Hostfilter helper command %s can not be opened.",
+	 is_host_allowed_command
+      );
+      return allow(result, errnop, herrnop);
+   }
    char *is_host_allowed_commandline;
    if (
       !(
 	 is_host_allowed_commandline = (
-	    malloc(sizeof(is_host_allowed_command) + strlen(name) + 3)
+	    malloc(strlen(is_host_allowed_command) + strlen(name) + 3)
 	 )
       )
    ) {
@@ -147,9 +259,12 @@ internal_getipnodebyname_r(const char *name, int af,
    );
    int rc = system(is_host_allowed_commandline);
    free(is_host_allowed_commandline);
-   if (rc != -1 && WIFEXITED(rc) && WEXITSTATUS(rc) != 127) {
+*/
+   int rc = execute_command(is_host_allowed_command, name);
+   if (rc != -1) {
+/* error(0, 0, "nss-hostfilter: internal_getipnodebyname_r(): hostfilter helper exit status: %d", rc); */
       return (
-	 WEXITSTATUS(rc) == 0 ?
+	 rc == 0 ?
 	    allow(result, errnop, herrnop) :
 	    deny(name, af, result, buffer, buflen, errnop, herrnop)
       );

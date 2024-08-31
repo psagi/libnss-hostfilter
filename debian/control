@@ -2,7 +2,7 @@ Source: libnss-hostfilter
 Section: net
 Priority: optional
 Maintainer: Peter Sági <peter.sagi.s@gmail.com>
-Build-Depends: debhelper-compat (= 12)
+Build-Depends: debhelper-compat (= 12), autoconf-archive
 #Build-Depends: debhelper (>= 8), dh-autoreconf
 Standards-Version: 3.9.2
 
