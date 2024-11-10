@@ -3,10 +3,25 @@ This directory contains the 0.1 release of the hostfilter NSS module.
 For general building and installation instructions, see the file INSTALL.
 
 The hostfilter NSS module provides a Name Service Switch module that resolves
-blacklisted hostnames to a configurable (dummy) IP address. It will return
-'notfound' on non-blacklisted hostnames allowing further modules (configured in
-nsswitch.conf) to resolve them. For more information on NSS (Name Service
-Switch), please consult the GNU C Library manual.
+blacklisted hostnames to a dummy IP address (192.168.2.254 as of now). It will
+return 'notfound' on non-blacklisted hostnames allowing further modules
+(configured in nsswitch.conf) to resolve them. For more information on NSS (Name
+Service Switch), please consult the GNU C Library manual.
+
+The decision about blocking the name resolution of a specific host name is done
+by an external program (hostfilter helper) that is to be provided by the user or
+some 3rd party application. This way the actual logic of blacklisting hosts can be provided flexibly. The path to this executable is configured in
+
+   /etc/hostfilter.conf
+
+The configuration file contains only one line with the full path to the
+executable.
+The hostfilter helper program must be executable by any user potentially using
+the host filtering mechanism. If the hostfilter helper is not specified or can
+not be executed, name resolution is allowed (along with outputting some
+diagnostic message on stderr).
+If hostfilter helper is successfully executed and returns 0, name resolution is
+allowed. Otherwise it is denied.
 
 In order to use the module, add the `hostfilter' service to
 your `/etc/nsswitch.conf'. The hostfilter module only supports
